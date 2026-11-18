@@ -1,0 +1,37 @@
+services:
+  jekyll:
+    image: ruby:3.3-bookworm
+    # working_dir hace que el comando de arranque empiece en /proyecto dentro del contenedor
+    working_dir: /proyecto
+    # ejecuta el proceso con un usuario si las claves estan vacias usa 1000:1000
+    user: "${JEKYLL_UID:-1000}:${JEKYLL_GID:-1000}"
+    # define las varianlsde entrono
+    environment:
+      BUNDLE_USER_HOME: /tmp/jekyll-bundler
+    volumes:
+      # carpeta del rpyecto en nuestro equipo -> /proyecto en el contenedeor
+      - ./proyecto:/proyecto
+      # docker guarda aqui las dependecias de rubt
+      - gemas:/usr/local/bundle
+    ports:
+      # ip local: puerto de nuestro equipo: puerto del contendor
+      - "127.0.0.1:4000:4000"
+      # segundo puerto para el navegador reciba avisos de recarga
+      - "127.0.0.1:35729:35729"
+    command: 
+      - sh 
+      - -ec
+      - | 
+        # solo en el primer arranque de un proyecto vacio 
+        if [ ! -f docs/Gemfile ]; then
+          gem install jekyll --version 3.10.0 --no-document
+          jekyll _3.10.0_ new docs --skip-bundle
+        fi
+        # Bundler instala las dependencias que falten y luego arranca jekyll
+        cd docs
+        bundle check || bundle install
+        exec bundle exec jekyll serve --host 0.0.0.0 --port 4000 --watch --force_polling --livereload --livereload-port 35729
+      
+
+volumes:
+  gemas:
